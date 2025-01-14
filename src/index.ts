@@ -52,6 +52,10 @@ const scraper = createScraper({
 	},
 });
 
+app.get('/', (req, res) => {
+	res.send('Hello World from Serizay');
+});
+
 // Route pour scraper une source spécifique
 app.post('/api/scrape', authenticateRequest, async (req, res) => {
 	try {
