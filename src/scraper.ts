@@ -6,7 +6,7 @@ import {
 	Source,
 	ScrapedArticle,
 	SOURCES_TYPES,
-	AbstractData
+	AbstractData,
 } from './types/types';
 import { getArticleStrategy } from './lib/scraping/article-strategies';
 import { getAbstractStrategy } from './lib/scraping/abstract-strategies';
@@ -44,7 +44,7 @@ const initBrowser = async (config: ScraperConfig): Promise<Browser> => {
 	const { username, password, host, port } = config.proxyConfig;
 
 	return puppeteer.launch({
-		executablePath: '/usr/bin/google-chrome',
+		executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
 		headless: true,
 		args: [
 			'--no-sandbox',
