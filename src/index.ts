@@ -15,12 +15,12 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(
-	cors({
-		origin: config.ALLOWED_ORIGINS,
-		methods: ['POST'],
-	})
-);
+// app.use(
+// 	cors({
+// 		origin: config.ALLOWED_ORIGINS,
+// 		methods: ['POST'],
+// 	})
+// );
 
 // Middleware d'authentification
 const authenticateRequest = (
