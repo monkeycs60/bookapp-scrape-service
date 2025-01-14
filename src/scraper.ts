@@ -10,6 +10,7 @@ import {
 } from './types/types';
 import { getArticleStrategy } from './lib/scraping/article-strategies';
 import { getAbstractStrategy } from './lib/scraping/abstract-strategies';
+import chromium from '@sparticuz/chromium';
 
 type ScraperConfig = {
 	proxyConfig: {
@@ -44,9 +45,10 @@ const initBrowser = async (config: ScraperConfig): Promise<Browser> => {
 	const { username, password, host, port } = config.proxyConfig;
 
 	return puppeteer.launch({
-		executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-		headless: true,
+		executablePath: await chromium.executablePath(),
+		headless: chromium.headless,
 		args: [
+			...chromium.args,
 			'--no-sandbox',
 			'--disable-setuid-sandbox',
 			'--disable-dev-shm-usage',
@@ -55,10 +57,7 @@ const initBrowser = async (config: ScraperConfig): Promise<Browser> => {
 			'--disable-blink-features=AutomationControlled',
 			'--window-size=1920,1080',
 		],
-		defaultViewport: {
-			width: 1920,
-			height: 1080,
-		},
+		defaultViewport: chromium.defaultViewport,
 	});
 };
 
