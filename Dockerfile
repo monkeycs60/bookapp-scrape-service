@@ -5,7 +5,9 @@ FROM node:20-slim
 RUN apt-get update \
     && apt-get install -y wget gnupg \
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/sources.list.d/google.list' \
+    # Correction du chemin du répertoire
+    && mkdir -p /etc/apt/sources.list.d \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
     && apt-get update \
     && apt-get install -y \
     chromium \
@@ -24,11 +26,11 @@ RUN apt-get update \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libgtk-3-0 \
-    fonts-noto-color-emoji \
     fonts-liberation \
+    # Nettoyage des fichiers inutiles
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Création du répertoire de travail
 WORKDIR /app
 
 # Copie des fichiers de configuration
