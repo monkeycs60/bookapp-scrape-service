@@ -77,25 +77,70 @@ app.post('/api/scrape', authenticateRequest, async (req, res) => {
 });
 
 // Route pour scraper toutes les sources
+// app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
+// 	try {
+// 		const results = [];
+
+// 		for (const source of SOURCES) {
+// 			try {
+// 				console.log(`Scraping ${source}...`);
+// 				const articles = await scraper.scrapeSource(source);
+// 				results.push({ source, articles, success: true });
+// 			} catch (error) {
+// 				console.error(`Error scraping ${source}:`, error);
+// 				results.push({
+// 					source,
+// 					success: false,
+// 					error: error instanceof Error ? error.message : 'Unknown error',
+// 				});
+// 			}
+// 			// Délai entre chaque source
+// 			await new Promise((r) => setTimeout(r, 5000));
+// 		}
+
+// 		res.json({ success: true, results });
+// 	} catch (error) {
+// 		res.status(500).json({
+// 			success: false,
+// 			error: error instanceof Error ? error.message : 'Unknown error',
+// 		});
+// 	}
+// });
+
 app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
 	try {
 		const results = [];
 
-		for (const source of SOURCES) {
-			try {
-				console.log(`Scraping ${source}...`);
-				const articles = await scraper.scrapeSource(source);
-				results.push({ source, articles, success: true });
-			} catch (error) {
-				console.error(`Error scraping ${source}:`, error);
-				results.push({
-					source,
-					success: false,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				});
+		// Traiter par lots de 3 sources maximum
+		for (let i = 0; i < SOURCES.length; i += 3) {
+			const sourceBatch = SOURCES.slice(i, i + 3);
+
+			// Traiter chaque lot en parallèle
+			const batchResults = await Promise.all(
+				sourceBatch.map(async (source) => {
+					try {
+						const articles = await scraper.scrapeSource(source);
+						return { source, success: true, articles };
+					} catch (error) {
+						console.error(`Error scraping ${source}:`, error);
+						return {
+							source,
+							success: false,
+							error:
+								error instanceof Error
+									? error.message
+									: 'Unknown error',
+						};
+					}
+				})
+			);
+
+			results.push(...batchResults);
+
+			// Attendre 30 secondes entre chaque lot
+			if (i + 3 < SOURCES.length) {
+				await new Promise((r) => setTimeout(r, 15000));
 			}
-			// Délai entre chaque source
-			await new Promise((r) => setTimeout(r, 5000));
 		}
 
 		res.json({ success: true, results });
