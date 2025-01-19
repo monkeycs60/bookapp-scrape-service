@@ -78,6 +78,7 @@ app.post('/api/scrape', authenticateRequest, async (req, res) => {
 
 // Route pour scraper toutes les sources
 app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
+	console.log('Scraping all sources... on digital ocean');
 	try {
 		const results = [];
 
