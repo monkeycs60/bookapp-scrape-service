@@ -11,6 +11,8 @@ const configSchema = z.object({
 	RECAPTCHA_API_KEY: z.string(),
 	MAIN_APP_URL: z.string(),
 	MAIN_APP_API_KEY: z.string(),
+	GOOGLE_GEMINI_API_KEY: z.string(),
+	DEEPSEEK_API_KEY: z.string(),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -27,6 +29,8 @@ export function loadConfig(): Config {
 		RECAPTCHA_API_KEY: process.env.RECAPTCHA_API_KEY,
 		MAIN_APP_URL: process.env.MAIN_APP_URL,
 		MAIN_APP_API_KEY: process.env.MAIN_APP_API_KEY,
+		GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY,
+		DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
 	});
 
 	if (!config.success) {

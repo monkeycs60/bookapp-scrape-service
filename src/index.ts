@@ -2,9 +2,16 @@
 import express from 'express';
 import cors from 'cors';
 import { loadConfig } from './config';
-import { createScraper } from './scraper';
-import { Source, SOURCES } from './types/types';
 import * as dotenv from 'dotenv';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import RecaptchaPlugin from 'puppeteer-extra-plugin-recaptcha';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createDeepSeek } from '@ai-sdk/deepseek';
+import prisma from './lib/prisma';
+import { processSingleSource, processAllSources } from './services/scrape';
+import { ScrapingContext } from './lib/scraping/types';
+import { Browser } from 'puppeteer';
 
 dotenv.config();
 
@@ -37,82 +44,93 @@ const authenticateRequest = (
 	next();
 };
 
+puppeteer.use(StealthPlugin());
+puppeteer.use(
+	RecaptchaPlugin({
+		provider: {
+			id: '2captcha',
+			token: process.env.CAPTCHA_API_KEY,
+		},
+		visualFeedback: true,
+		throwOnError: true,
+	})
+);
+
 // Initialisation du scraper
-const scraper = createScraper({
-	proxyConfig: {
-		username: config.PROXY_USERNAME,
-		password: config.PROXY_PASSWORD,
-		host: config.PROXY_HOST,
-		port: config.PROXY_PORT,
-	},
-	recaptchaApiKey: config.RECAPTCHA_API_KEY,
-	mainAppConfig: {
-		url: config.MAIN_APP_URL,
-		apiKey: config.MAIN_APP_API_KEY,
-	},
-});
+// const scraper = createScraper({
+// 	proxyConfig: {
+// 		username: config.PROXY_USERNAME,
+// 		password: config.PROXY_PASSWORD,
+// 		host: config.PROXY_HOST,
+// 		port: config.PROXY_PORT,
+// 	},
+// 	recaptchaApiKey: config.RECAPTCHA_API_KEY,
+// 	mainAppConfig: {
+// 		url: config.MAIN_APP_URL,
+// 		apiKey: config.MAIN_APP_API_KEY,
+// 	},
+// });
 
 app.get('/', (req, res) => {
 	res.send('Hello World from Serizay');
 });
 
-// Route pour scraper une source spécifique
-app.post('/api/scrape', authenticateRequest, async (req, res) => {
-	try {
-		const { source } = req.body as { source: Source };
-
-		if (!SOURCES.includes(source)) {
-			return res.status(400).json({ error: 'Invalid source' });
-		}
-
-		const articles = await scraper.scrapeSource(source);
-		res.json({ success: true, articles });
-	} catch (error) {
-		console.error('Scraping error:', error);
-		res.status(500).json({
-			success: false,
-			error: error instanceof Error ? error.message : 'Unknown error',
-		});
-	}
-});
-
 // Route pour scraper toutes les sources
 app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
 	console.log('Scraping all sources... on digital ocean');
+
+	let browser: Browser | undefined;
+
 	try {
-		const results = [];
+		const { sourceId } = req.body;
 
-		for (const source of SOURCES) {
-			try {
-				console.log(`Scraping ${source}...`);
-				const articles = await scraper.scrapeSource(source);
-				results.push({ source, articles, success: true });
-			} catch (error) {
-				console.error(`Error scraping ${source}:`, error);
-				results.push({
-					source,
-					success: false,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				});
-			}
-			// Délai entre chaque source
-			await new Promise((r) => setTimeout(r, 5000));
-		}
-
-		res.json({ success: true, results });
-	} catch (error) {
-		res.status(500).json({
-			success: false,
-			error: error instanceof Error ? error.message : 'Unknown error',
+		browser = await puppeteer.launch({
+			headless: false,
+			args: [
+				`--proxy-server=http://${config.PROXY_HOST}:${config.PROXY_PORT}`,
+				'--no-sandbox',
+				'--disable-setuid-sandbox',
+				'--disable-infobars',
+				'--disable-dev-shm-usage',
+				'--disable-blink-features=AutomationControlled',
+				'--disable-web-security',
+				'--disable-features=IsolateOrigins,site-per-process',
+				'--window-size=1920,1080',
+			],
+			defaultViewport: {
+				width: 1920,
+				height: 1080,
+			},
 		});
-	}
-});
 
-// Gestion du nettoyage à l'arrêt
-process.on('SIGTERM', async () => {
-	console.log('SIGTERM signal received. Cleaning up...');
-	await scraper.cleanup();
-	process.exit(0);
+		const context: ScrapingContext = {
+			prisma,
+			browser,
+			google: createGoogleGenerativeAI({
+				apiKey: config.GOOGLE_GEMINI_API_KEY,
+			}),
+			deepseek: createDeepSeek({
+				apiKey: config.DEEPSEEK_API_KEY,
+			}),
+		};
+
+		if (sourceId) {
+			const result = await processSingleSource(context, sourceId);
+			return res.status(200).json(result);
+		} else {
+			const results = await processAllSources(context);
+			return res.status(200).json({ success: true, results });
+		}
+	} catch (error) {
+		console.error('Error:', error);
+		return res
+			.status(500)
+			.json({ success: false, message: 'Internal server error' });
+	} finally {
+		if (browser) {
+			await browser.close();
+		}
+	}
 });
 
 const PORT = config.PORT;

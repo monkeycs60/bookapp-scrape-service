@@ -41,7 +41,7 @@ export async function setupScrapingPage(browser: Browser) {
 	return page;
 }
 
-export async function handlePageLoad(page: Page, source: string) {
+export async function handlePageLoad(page: Page) {
 	try {
 		await page.solveRecaptchas();
 		console.log('Recaptcha résolu');
@@ -49,7 +49,7 @@ export async function handlePageLoad(page: Page, source: string) {
 		console.log('Pas de recaptcha trouvé ou erreur:', error);
 	}
 
-	await page.screenshot({ path: `screenshot${source}.png` });
+	// await page.screenshot({ path: `screenshot${source}.png` });
 	await new Promise((resolve) => setTimeout(resolve, 3000));
 
 	const content = await page.content();
@@ -60,9 +60,6 @@ export async function handlePageLoad(page: Page, source: string) {
 		await page.solveRecaptchas();
 		console.log('Recaptcha résolu encore une fois');
 	}
-
-	const pageHtml = await page.content();
-	console.log(`HTML complet de la page ${source}:`, pageHtml);
 }
 
 export async function handleScrapingError(
@@ -101,7 +98,7 @@ export async function scrapeWithRetry(page: Page, url: string, maxRetries = 4) {
 				// Attendre que le captcha soit chargé
 				await page
 					.waitForSelector('#challenge-form', { timeout: 10000 })
-					.catch(() => { });
+					.catch(() => {});
 
 				try {
 					await page.solveRecaptchas();
