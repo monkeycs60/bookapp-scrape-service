@@ -56,21 +56,6 @@ puppeteer.use(
 	})
 );
 
-// Initialisation du scraper
-// const scraper = createScraper({
-// 	proxyConfig: {
-// 		username: config.PROXY_USERNAME,
-// 		password: config.PROXY_PASSWORD,
-// 		host: config.PROXY_HOST,
-// 		port: config.PROXY_PORT,
-// 	},
-// 	recaptchaApiKey: config.RECAPTCHA_API_KEY,
-// 	mainAppConfig: {
-// 		url: config.MAIN_APP_URL,
-// 		apiKey: config.MAIN_APP_API_KEY,
-// 	},
-// });
-
 app.get('/', (req, res) => {
 	res.send('Hello World from Serizay');
 });
@@ -83,6 +68,7 @@ app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
 
 	try {
 		const { sourceId } = req.body;
+		console.log('Scraping source:', sourceId);
 
 		browser = await puppeteer.launch({
 			headless: false,
@@ -115,9 +101,11 @@ app.post('/api/scrape-all', authenticateRequest, async (req, res) => {
 		};
 
 		if (sourceId) {
+			console.log('Scraping single source:', sourceId);
 			const result = await processSingleSource(context, sourceId);
 			return res.status(200).json(result);
 		} else {
+			console.log('Scraping all sources');
 			const results = await processAllSources(context);
 			return res.status(200).json({ success: true, results });
 		}
