@@ -136,7 +136,9 @@ export const scrapeAndAnalyzeArticle = async (
 		const finalResult = await generateWithRetry<UniqueArticleType>({
 			prompt: finalPrompt,
 			schema: uniqueArticleSchema,
-			model: context.deepseek('deepseek-chat'),
+			model: context.google('gemini-2.0-flash-exp', {
+				structuredOutputs: true,
+			}),
 		});
 
 		console.log({ finalResult });
